@@ -1,0 +1,199 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Skarb Olgi</title>
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Playfair+Display:ital,wght@0,400;0,700;1,400&display=swap" rel="stylesheet">
+    <!-- Tailwind CSS Play CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['Inter', 'ui-sans-serif', 'system-ui'],
+                        serif: ['Playfair Display', 'serif'],
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        body { background-color: #FAF9F6; color: #2C2C2C; }
+        .selection-amber ::selection { background: #fef3c7; color: #92400e; }
+    </style>
+    <!-- React, ReactDOM, Babel, Lucide, Framer Motion (Simple fallback for animation in standalone) -->
+    <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+    <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    <script src="https://unpkg.com/lucide@latest"></script>
+</head>
+<body class="selection-amber">
+    <div id="root"></div>
+
+    <script type="text/babel">
+        const { useState, useEffect } = React;
+
+        const PASSCODE_HASH = "fd881e75e0da301d7f3c30eb98f4fbbc87dcd373ff17b04b8d0cd92a94176bf3"; // SHA-256 of "Olgamarzy"
+        const STARTING_AMOUNT = 10000;
+        const ANNUAL_RATE = 0.03;
+        const GIFT_START_DATE = new Date('2026-05-09');
+
+        async function hashPasscode(text) {
+            const encoder = new TextEncoder();
+            const data = encoder.encode(text);
+            const hashBuffer = await crypto.subtle.digest('SHA-256', data);
+            const hashArray = Array.from(new Uint8Array(hashBuffer));
+            return hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+        }
+
+        function App() {
+            const [password, setPassword] = useState('');
+            const [isUnlocked, setIsUnlocked] = useState(false);
+            const [error, setError] = useState(false);
+            const [currentValue, setCurrentValue] = useState(STARTING_AMOUNT);
+
+            useEffect(() => {
+                const calculateGrowth = () => {
+                    const now = new Date();
+                    const diffTime = now.getTime() - GIFT_START_DATE.getTime();
+                    const years = Math.max(0, diffTime / (1000 * 60 * 60 * 24 * 365.25));
+                    
+                    const growthYears = Math.max(0, years - 1);
+                    const value = STARTING_AMOUNT * Math.pow(1 + ANNUAL_RATE, growthYears);
+                    setCurrentValue(Math.floor(value));
+                };
+
+                calculateGrowth();
+                const interval = setInterval(calculateGrowth, 1000);
+                return () => clearInterval(interval);
+            }, []);
+
+            useEffect(() => {
+                if (window.lucide) {
+                    window.lucide.createIcons();
+                }
+            }, [isUnlocked, error]);
+
+            const handleUnlock = async (e) => {
+                e.preventDefault();
+                const hashedInput = await hashPasscode(password.trim());
+                if (hashedInput === PASSCODE_HASH) {
+                    setIsUnlocked(true);
+                    setError(false);
+                } else {
+                    setError(true);
+                    setTimeout(() => setError(false), 500);
+                }
+            };
+
+            if (!isUnlocked) {
+                return (
+                    <div className="min-h-screen flex items-center justify-center p-6 bg-gradient-to-br from-[#FAF9F6] via-amber-50 to-orange-50">
+                        <div className="w-full max-w-md bg-white p-8 md:p-12 rounded-[32px] shadow-2xl text-center border border-amber-100/50 relative overflow-hidden">
+                            <div className="w-20 h-20 bg-amber-50 rounded-[24px] flex items-center justify-center mx-auto mb-8 border border-amber-100">
+                                <i data-lucide="lock" class="w-10 h-10 text-amber-600"></i>
+                            </div>
+                            <h1 className="text-3xl font-serif font-bold text-gray-900 mb-2">Skarb Olgi</h1>
+                            <p className="text-gray-500 mb-8 text-sm">Wpisz hasło, aby odkryć swój skarb marzeń.</p>
+                            <form onSubmit={handleUnlock} className="space-y-4">
+                                <input
+                                    type="password"
+                                    placeholder="Wpisz hasło..."
+                                    value={password}
+                                    onChange={(e) => setPassword(e.target.value)}
+                                    className="w-full px-6 py-4 bg-gray-50 border-2 border-transparent focus:border-amber-400 focus:bg-white rounded-2xl outline-none transition-all text-center font-medium"
+                                />
+                                {error && <p className="text-xs text-red-500 mt-2 font-semibold">Błędne hasło!</p>}
+                                <button type="submit" className="w-full py-4 bg-[#B45309] hover:bg-[#92400E] text-white font-semibold rounded-2xl transition-all shadow-lg flex items-center justify-center gap-2">
+                                    Otwórz Sejf
+                                    <i data-lucide="chevron-right" class="w-5 h-5"></i>
+                                </button>
+                            </form>
+                        </div>
+                    </div>
+                );
+            }
+
+            return (
+                <div className="min-h-screen w-full max-w-5xl mx-auto px-6 py-12 md:py-24">
+                    <header className="text-center mb-20">
+                        <div className="inline-flex items-center justify-center w-24 h-24 bg-amber-100 rounded-full mb-8">
+                            <i data-lucide="unlock" class="w-12 h-12 text-amber-600"></i>
+                        </div>
+                        <h2 className="text-5xl md:text-7xl font-serif font-bold text-gray-900 mb-6 tracking-tight">Witaj, Olgo!</h2>
+                        <p className="text-xl md:text-2xl text-gray-600 max-w-2xl mx-auto italic font-serif leading-relaxed">
+                            „Przyszłość należy do tych, którzy wierzą w piękno swoich marzeń.”
+                        </p>
+                    </header>
+
+                    <div className="flex justify-center mb-16">
+                        <div className="w-full max-w-3xl bg-white p-8 md:p-12 rounded-[40px] shadow-sm border border-amber-50 flex flex-col justify-between relative overflow-hidden">
+                            <div>
+                                <div className="flex items-center gap-2 text-amber-600 mb-6">
+                                    <div className="w-10 h-10 bg-amber-50 rounded-xl flex items-center justify-center">
+                                        <i data-lucide="trending-up" class="w-5 h-5"></i>
+                                    </div>
+                                    <span className="text-xs font-bold uppercase tracking-[0.2em]">Aktualna Wartość Skarbu</span>
+                                </div>
+                                <div className="flex items-baseline gap-3">
+                                    <span className="text-6xl md:text-8xl font-serif font-bold text-gray-900">
+                                        {currentValue.toLocaleString('pl-PL')}
+                                    </span>
+                                    <span className="text-3xl font-serif text-amber-600 font-bold italic">zł</span>
+                                </div>
+                            </div>
+                            <div className="mt-12 pt-8 border-t border-gray-50 flex items-center justify-between">
+                                <div className="flex -space-x-2">
+                                    <div className="w-8 h-8 rounded-full border-2 border-white bg-amber-100 flex items-center justify-center"><i data-lucide="heart" class="w-4 h-4 text-amber-600"></i></div>
+                                    <div className="w-8 h-8 rounded-full border-2 border-white bg-amber-200 flex items-center justify-center"><i data-lucide="sparkles" class="w-4 h-4 text-amber-700"></i></div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div className="bg-white p-8 md:p-20 rounded-[48px] shadow-sm border border-amber-50 relative">
+                        <div className="max-w-prose mx-auto">
+                            <header className="mb-12">
+                                <div className="w-12 h-1 bg-amber-200 mb-8"></div>
+                                <h3 className="text-3xl md:text-4xl font-serif font-bold text-gray-900 flex items-center gap-4">
+                                    Droga Olgo, <i data-lucide="heart" class="w-6 h-6 text-rose-400"></i>
+                                </h3>
+                            </header>
+                            <div className="space-y-8 text-gray-800 leading-[1.8] font-serif text-xl md:text-2xl">
+                                <p>Właśnie odkryłaś bardzo wyjątkowy prezent. To skarb, który w przyszłości spełni Twoje marzenia. Teraz jest zamknięty w sejfie, ale przez kolejne 10 lat będzie rósł razem z Tobą.</p>
+                                <p>W przyszłości, kiedy będziesz czytać ten list, sejf się otworzy, tak samo jak Twoja droga do spełnienia marzeń! Studia za granicą, hobby, podróż dookoła świata, dom – Ty zadecydujesz w co chcesz zainwestować, co sprawi, że Twoje serce zabije mocniej.</p>
+                                <blockquote className="border-l-4 border-amber-200 pl-8 my-10 font-bold text-gray-900 italic">
+                                    „Oszczędzanie to nie tylko pieniądze – to siła i wolność wyboru Twojej drogi.”
+                                </blockquote>
+                                <p>Zaczęłaś młodo, a to znaczy, że przyszłość jest Twoja. Dbaj o siebie, śmiało marz i nigdy nie przestawaj wierzyć we własne możliwości. Jesteś wielka!</p>
+                            </div>
+                            <div className="mt-20 pt-16 border-t border-gray-100 text-center">
+                                <p className="font-serif italic text-gray-400 text-lg mb-1">Z miłością,</p>
+                                <p className="font-serif text-2xl md:text-3xl font-bold text-gray-900 leading-snug">
+                                    Prababcia Stefania, babcia Bogumiła, matka chrzestna Patrycja i wujek Łukasz
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <footer className="mt-24 py-16 text-center">
+                        <div className="inline-block px-6 py-2 bg-amber-100/30 rounded-full mb-4">
+                            <p className="text-[11px] text-amber-800 font-black uppercase tracking-[0.4em] flex items-center gap-3">
+                                <i data-lucide="sparkles" class="w-4 h-4"></i>
+                                Rosnę razem z Tobą
+                                <i data-lucide="sparkles" class="w-4 h-4"></i>
+                            </p>
+                        </div>
+                    </footer>
+                </div>
+            );
+        }
+
+        const root = ReactDOM.createRoot(document.getElementById('root'));
+        root.render(<App />);
+    </script>
+</body>
+</html>
